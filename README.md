@@ -536,7 +536,7 @@ Based on the analysis, this project recommends:
 
 ## 👨🏾‍💻 About the Author
 
-**John Wachira** | Programme Delivery Specialist, ALX Africa  
+**John Wachira** | Programme Delivery Specialist, Operations and Community Specialist   
 Data Science | Data Engineering | Analytics
 
 - 📧 jowac254@gmail.com  
