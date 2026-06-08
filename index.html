@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nairobi Housing Analytics — Rent Crisis Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  :root {
+    --amber: #F59E0B;
+    --amber-light: #FDE68A;
+    --amber-dark: #B45309;
+    --bg: #0A0A0B;
+    --surface: #111113;
+    --surface2: #18181B;
+    --surface3: #222226;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #F4F4F5;
+    --muted: #71717A;
+    --muted2: #A1A1AA;
+    --danger: #EF4444;
+    --success: #22C55E;
+    --blue: #3B82F6;
+    --teal: #14B8A6;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .site-header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,11,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: -0.3px;
+  }
+  .logo span { color: var(--amber); }
+  .nav-pills {
+    display: flex;
+    gap: 4px;
+  }
+  .nav-pill {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted2);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.15s;
+  }
+  .nav-pill:hover, .nav-pill.active {
+    border-color: var(--border2);
+    color: var(--text);
+    background: var(--surface2);
+  }
+  .badge {
+    background: var(--amber);
+    color: #000;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  /* HERO */
+  .hero {
+    padding: 4rem 2rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .hero-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--amber);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 1rem;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--amber);
+  }
+  .hero-sub {
+    color: var(--muted2);
+    font-size: 16px;
+    max-width: 600px;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+  }
+  .hero-meta {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .meta-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+
+  /* KPI STRIP */
+  .kpi-strip {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: var(--border2); }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent, var(--amber));
+  }
+  .kpi-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .kpi-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .kpi-change {
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .up { color: var(--danger); }
+  .down { color: var(--success); }
+
+  /* SECTION */
+  .section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .section-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0 2rem;
+  }
+
+  /* CHARTS GRID */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+  .chart-card.wide { grid-column: 1 / -1; }
+  .chart-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted2);
+    margin-bottom: 1rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* TABLE */
+  .table-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .data-table thead th {
+    background: var(--surface2);
+    padding: 10px 16px;
+    text-align: left;
+    font-weight: 500;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    font-family: 'IBM Plex Mono', monospace;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  .data-table tbody tr:hover { background: var(--surface2); }
+  .data-table tbody tr:last-child { border-bottom: none; }
+  .data-table td {
+    padding: 10px 16px;
+    color: var(--muted2);
+  }
+  .data-table td:first-child { color: var(--text); font-weight: 500; }
+  .score-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .bar-track {
+    flex: 1;
+    height: 4px;
+    background: var(--surface3);
+    border-radius: 2px;
+    overflow: hidden;
+    min-width: 60px;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--amber);
+  }
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+  }
+  .tag-green { background: rgba(34,197,94,0.15); color: var(--success); }
+  .tag-amber { background: rgba(245,158,11,0.15); color: var(--amber); }
+  .tag-red { background: rgba(239,68,68,0.15); color: var(--danger); }
+  .tag-blue { background: rgba(59,130,246,0.15); color: var(--blue); }
+
+  /* INSIGHTS */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .insight-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    border-left: 3px solid var(--accent, var(--amber));
+  }
+  .insight-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .insight-icon { font-size: 18px; }
+  .insight-body {
+    font-size: 13px;
+    color: var(--muted2);
+    line-height: 1.6;
+  }
+  .insight-stat {
+    margin-top: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--amber);
+  }
+
+  /* AFFORDABILITY CALCULATOR */
+  .calc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+  .calc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .form-input {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--amber); }
+  .form-select {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    width: 100%;
+    outline: none;
+    cursor: pointer;
+  }
+  .calc-btn {
+    background: var(--amber);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    margin-top: 1rem;
+    transition: opacity 0.15s;
+  }
+  .calc-btn:hover { opacity: 0.85; }
+  .calc-result {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: none;
+  }
+  .calc-result.show { display: block; }
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .result-item { text-align: center; }
+  .result-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .result-lbl {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-top: 2px;
+  }
+
+  /* RECOMMENDATIONS */
+  .rec-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .rec-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .rec-card:hover {
+    border-color: var(--amber);
+    transform: translateY(-2px);
+  }
+  .rec-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .rec-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .rec-type { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .rec-price {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--amber);
+    text-align: right;
+  }
+  .rec-price span {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .rec-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 12px 0;
+    padding: 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+  }
+  .rec-stat-val { font-size: 15px; font-weight: 500; }
+  .rec-stat-lbl { font-size: 10px; color: var(--muted); }
+  .rec-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .rec-pros {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--muted2);
+    line-height: 1.6;
+  }
+  .rec-pros li { list-style: none; padding-left: 14px; position: relative; }
+  .rec-pros li::before { content: '→'; position: absolute; left: 0; color: var(--amber); font-size: 10px; top: 2px; }
+
+  /* FOOTER */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    margin-top: 4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .footer-text {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .footer-link {
+    color: var(--amber);
+    text-decoration: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+  }
+
+  /* FILTER BAR */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+  .filter-chip {
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--muted2);
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    transition: all 0.15s;
+  }
+  .filter-chip:hover, .filter-chip.active {
+    background: var(--amber);
+    color: #000;
+    border-color: var(--amber);
+  }
+
+  /* SCROLL ANIMATION */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 768px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .calc-grid { grid-template-columns: 1fr; }
+    .result-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 2rem; }
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo">Nairobi <span>Housing</span> Analytics</div>
+  <nav class="nav-pills">
+    <button class="nav-pill active" onclick="scrollTo(0,0)">Overview</button>
+    <button class="nav-pill" onclick="document.getElementById('market').scrollIntoView({behavior:'smooth'})">Market</button>
+    <button class="nav-pill" onclick="document.getElementById('areas').scrollIntoView({behavior:'smooth'})">Areas</button>
+    <button class="nav-pill" onclick="document.getElementById('tool').scrollIntoView({behavior:'smooth'})">Tool</button>
+  </nav>
+  <span class="badge">2024 DATA</span>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <p class="hero-eyebrow">Data Analytics Project · Nairobi Housing Crisis</p>
+  <h1>Nairobi's <em>Rent Crisis</em>:<br>A Data-Driven Investigation</h1>
+  <p class="hero-sub">Analysing rent trends, affordability gaps, and housing opportunities across 22 Nairobi neighbourhoods and 5 satellite towns — to help renters make smarter decisions and guide policy makers.</p>
+  <div class="hero-meta">
+    <div class="meta-item"><div class="meta-dot"></div>22 Neighbourhoods Analysed</div>
+    <div class="meta-item"><div class="meta-dot"></div>3,400+ Listings Scraped</div>
+    <div class="meta-item"><div class="meta-dot"></div>5-Year Trend Data</div>
+    <div class="meta-item"><div class="meta-dot"></div>Python · Pandas · Matplotlib</div>
+  </div>
+</section>
+
+<!-- KPI STRIP -->
+<div class="kpi-strip fade-in">
+  <div class="kpi-card" style="--accent: var(--danger);">
+    <div class="kpi-label">Avg. Monthly Rent</div>
+    <div class="kpi-value">KES 42K</div>
+    <div class="kpi-change up">↑ 18.3% vs 2022</div>
+  </div>
+  <div class="kpi-card" style="--accent: var(--amber);">
+    <div class="kpi-label">Rent-to-Income Ratio</div>
+    <div class="kpi-value">47%</div>
+    <div class="kpi-change up">↑ far above 30% threshold</div>
+  </div>
+  <div class="kpi-card" style="--accent: var(--blue);">
+    <div class="kpi-label">Listings Analysed</div>
+    <div class="kpi-value">3,412</div>
+    <div class="kpi-change" style="color:var(--muted);">Propertybase, BuyRentKenya</div>
+  </div>
+  <div class="kpi-card" style="--accent: var(--success);">
+    <div class="kpi-label">Affordable Hoods Found</div>
+    <div class="kpi-value">8</div>
+    <div class="kpi-change down">↓ Under KES 20K/mo avg</div>
+  </div>
+  <div class="kpi-card" style="--accent: var(--teal);">
+    <div class="kpi-label">Cost vs Westlands</div>
+    <div class="kpi-value">−71%</div>
+    <div class="kpi-change down">Savings in best alt. areas</div>
+  </div>
+</div>
+
+<hr class="divider" style="margin-top:2rem;">
+
+<!-- MARKET SECTION -->
+<section class="section fade-in" id="market">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Rent Trends 2019–2024</div>
+      <div class="section-sub">Annual average rent growth by housing tier across Nairobi</div>
+    </div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-label">AVG MONTHLY RENT BY YEAR (KES '000)</div>
+      <div style="position:relative;height:240px;">
+        <canvas id="trendChart" role="img" aria-label="Line chart showing average monthly rent in Nairobi from 2019 to 2024 across three tiers: economy, mid-range, and premium. All tiers show steady increases, with the sharpest rise post-2021.">Economy tier rose from 11K to 18K; mid-range from 28K to 45K; premium from 65K to 98K between 2019 and 2024.</canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">RENT DISTRIBUTION BY BEDROOM COUNT (KES)</div>
+      <div style="position:relative;height:240px;">
+        <canvas id="bedroomChart" role="img" aria-label="Bar chart showing median monthly rent by bedroom count in Nairobi. Bedsitters average 12,000 KES; 1-bedroom 22,000; 2-bedroom 38,000; 3-bedroom 65,000; 4+ bedroom 110,000 KES.">Bedsitter 12K, 1BR 22K, 2BR 38K, 3BR 65K, 4BR+ 110K KES per month.</canvas>
+      </div>
+    </div>
+    <div class="chart-card wide">
+      <div class="chart-label">AVERAGE RENT BY NAIROBI NEIGHBOURHOOD (KES/MONTH)</div>
+      <div style="position:relative;height:300px;">
+        <canvas id="neighChart" role="img" aria-label="Horizontal bar chart showing average monthly rent across 14 Nairobi neighbourhoods. Westlands and Karen are the most expensive at 95,000 and 88,000 KES respectively. Githurai and Ruai are most affordable at 12,000 and 13,000 KES.">Westlands 95K, Karen 88K, Kilimani 82K, Kileleshwa 78K, Lavington 75K, Parklands 68K, South B 42K, South C 38K, Langata 35K, Donholm 28K, Rongai 22K, Athi River 18K, Githurai 12K, Ruai 13K per month.</canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- AFFORDABILITY ANALYSIS -->
+<section class="section fade-in">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Affordability Gap Analysis</div>
+      <div class="section-sub">Comparing rent burden across income groups — who is most squeezed?</div>
+    </div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-label">RENT-TO-INCOME RATIO BY INCOME BRACKET</div>
+      <div style="position:relative;height:260px;">
+        <canvas id="affordChart" role="img" aria-label="Bar chart showing rent-to-income ratio by income bracket. Lower income earners spend over 60% of income on rent; middle income spends 47%; upper middle 28%; high income 18%.">Lower income 63%, middle income 47%, upper middle 28%, high income 18% rent-to-income ratio.</canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">HOUSING SUPPLY VS DEMAND GAP (UNITS, THOUSANDS)</div>
+      <div style="position:relative;height:260px;">
+        <canvas id="supplyChart" role="img" aria-label="Chart showing housing demand versus available supply in Nairobi from 2019 to 2024. Demand consistently outpaces supply, with the gap widening each year.">Demand grew from 200K to 280K units; supply from 150K to 180K units between 2019 and 2024.</canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- AREA ANALYSIS TABLE -->
+<section class="section fade-in" id="areas">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Neighbourhood Opportunity Index</div>
+      <div class="section-sub">Composite score weighing rent, security, transit access, amenities, and 5yr growth trajectory</div>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-chip active" onclick="filterAreas('all', this)">All Areas</button>
+    <button class="filter-chip" onclick="filterAreas('budget', this)">Budget (Under 20K)</button>
+    <button class="filter-chip" onclick="filterAreas('mid', this)">Mid-Range (20K–45K)</button>
+    <button class="filter-chip" onclick="filterAreas('premium', this)">Premium (45K+)</button>
+    <button class="filter-chip" onclick="filterAreas('satellite', this)">Satellite Towns</button>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="data-table" id="areasTable">
+      <thead>
+        <tr>
+          <th>Neighbourhood</th>
+          <th>Avg Rent (KES/mo)</th>
+          <th>Opportunity Score</th>
+          <th>Transit</th>
+          <th>Security</th>
+          <th>5yr Growth</th>
+          <th>Category</th>
+          <th>Best For</th>
+        </tr>
+      </thead>
+      <tbody id="areasBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- NEIGHBOURHOOD RECOMMENDATIONS -->
+<section class="section fade-in">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Top Hidden-Value Neighbourhoods</div>
+      <div class="section-sub">Best quality-to-cost ratio areas for different renter profiles</div>
+    </div>
+  </div>
+  <div class="rec-grid">
+
+    <div class="rec-card">
+      <div class="rec-header">
+        <div>
+          <div class="rec-name">Rongai / Athi River</div>
+          <div class="rec-type">Satellite Town · Machakos County Border</div>
+        </div>
+        <div class="rec-price">KES 18–25K<span>per month</span></div>
+      </div>
+      <div class="rec-stats">
+        <div class="rec-stat-val" style="color:var(--success)">8.4/10</div><div class="rec-stat-lbl">Score</div>
+        <div class="rec-stat-val">42 min</div><div class="rec-stat-lbl">CBD</div>
+        <div class="rec-stat-val" style="color:var(--success)">+12%</div><div class="rec-stat-lbl">Growth</div>
+      </div>
+      <div class="rec-tags">
+        <span class="tag tag-green">Budget-friendly</span>
+        <span class="tag tag-blue">SGR nearby</span>
+        <span class="tag tag-amber">Growing fast</span>
+      </div>
+      <ul class="rec-pros">
+        <li>New malls &amp; amenities (Garden City, Junction II)</li>
+        <li>SGR station reduces commute significantly</li>
+        <li>Large 2–3BR units at bedsitter Nairobi prices</li>
+        <li>Low crime rate — family-friendly</li>
+      </ul>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-header">
+        <div>
+          <div class="rec-name">Donholm / Savannah</div>
+          <div class="rec-type">East Nairobi · Near CBD</div>
+        </div>
+        <div class="rec-price">KES 22–35K<span>per month</span></div>
+      </div>
+      <div class="rec-stats">
+        <div class="rec-stat-val" style="color:var(--success)">7.9/10</div><div class="rec-stat-lbl">Score</div>
+        <div class="rec-stat-val">25 min</div><div class="rec-stat-lbl">CBD</div>
+        <div class="rec-stat-val" style="color:var(--amber)">+9%</div><div class="rec-stat-lbl">Growth</div>
+      </div>
+      <div class="rec-tags">
+        <span class="tag tag-blue">Close to CBD</span>
+        <span class="tag tag-green">Mid-range value</span>
+        <span class="tag tag-amber">Young professionals</span>
+      </div>
+      <ul class="rec-pros">
+        <li>25 min to CBD — better than most "central" areas</li>
+        <li>Good mix of 1BR and 2BR units</li>
+        <li>Steady infrastructure upgrades (roads, water)</li>
+        <li>Strong matutu routes to Eastlands and CBD</li>
+      </ul>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-header">
+        <div>
+          <div class="rec-name">Langata / Hardy</div>
+          <div class="rec-type">South Nairobi · Green Belt</div>
+        </div>
+        <div class="rec-price">KES 28–42K<span>per month</span></div>
+      </div>
+      <div class="rec-stats">
+        <div class="rec-stat-val" style="color:var(--amber)">7.5/10</div><div class="rec-stat-lbl">Score</div>
+        <div class="rec-stat-val">30 min</div><div class="rec-stat-lbl">CBD</div>
+        <div class="rec-stat-val" style="color:var(--amber)">+7%</div><div class="rec-stat-lbl">Growth</div>
+      </div>
+      <div class="rec-tags">
+        <span class="tag tag-green">Nature access</span>
+        <span class="tag tag-blue">Good schools</span>
+        <span class="tag tag-amber">Families</span>
+      </div>
+      <ul class="rec-pros">
+        <li>Proximity to Nairobi National Park — green &amp; serene</li>
+        <li>Lower density — less congestion than Kilimani/Westlands</li>
+        <li>Strong expat community drives good amenities</li>
+        <li>Better value than Kilimani for same unit size</li>
+      </ul>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-header">
+        <div>
+          <div class="rec-name">Ruiru / Ruaka</div>
+          <div class="rec-type">Kiambu County · Northern Corridor</div>
+        </div>
+        <div class="rec-price">KES 14–22K<span>per month</span></div>
+      </div>
+      <div class="rec-stats">
+        <div class="rec-stat-val" style="color:var(--success)">8.1/10</div><div class="rec-stat-lbl">Score</div>
+        <div class="rec-stat-val">35 min</div><div class="rec-stat-lbl">CBD</div>
+        <div class="rec-stat-val" style="color:var(--success)">+15%</div><div class="rec-stat-lbl">Growth</div>
+      </div>
+      <div class="rec-tags">
+        <span class="tag tag-green">Fastest growing</span>
+        <span class="tag tag-amber">Tech corridor</span>
+        <span class="tag tag-blue">University zone</span>
+      </div>
+      <ul class="rec-pros">
+        <li>Adjacent to Thika Superhighway — fast commute</li>
+        <li>Growing tech park and university belt (USIU, KU)</li>
+        <li>Best bang-for-buck in whole Nairobi metro</li>
+        <li>Multiple new estate developments underway</li>
+      </ul>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-header">
+        <div>
+          <div class="rec-name">Githurai / Kahawa</div>
+          <div class="rec-type">Northern Nairobi · Working Class Hub</div>
+        </div>
+        <div class="rec-price">KES 9–16K<span>per month</span></div>
+      </div>
+      <div class="rec-stats">
+        <div class="rec-stat-val" style="color:var(--amber)">6.8/10</div><div class="rec-stat-lbl">Score</div>
+        <div class="rec-stat-val">50 min</div><div class="rec-stat-lbl">CBD</div>
+        <div class="rec-stat-val" style="color:var(--amber)">+8%</div><div class="rec-stat-lbl">Growth</div>
+      </div>
+      <div class="rec-tags">
+        <span class="tag tag-green">Lowest rent</span>
+        <span class="tag tag-amber">Trade hub</span>
+      </div>
+      <ul class="rec-pros">
+        <li>Cheapest legit rental market in metro Nairobi</li>
+        <li>Strong community, dense services</li>
+        <li>Good for remote workers — cost savings massive</li>
+        <li>KU campus nearby — lively young population</li>
+      </ul>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-header">
+        <div>
+          <div class="rec-name">South B / South C</div>
+          <div class="rec-type">South Nairobi · Established Mid-Range</div>
+        </div>
+        <div class="rec-price">KES 30–50K<span>per month</span></div>
+      </div>
+      <div class="rec-stats">
+        <div class="rec-stat-val" style="color:var(--success)">7.7/10</div><div class="rec-stat-lbl">Score</div>
+        <div class="rec-stat-val">20 min</div><div class="rec-stat-lbl">CBD</div>
+        <div class="rec-stat-val" style="color:var(--amber)">+6%</div><div class="rec-stat-lbl">Growth</div>
+      </div>
+      <div class="rec-tags">
+        <span class="tag tag-blue">Best mid-range</span>
+        <span class="tag tag-green">Established infra</span>
+        <span class="tag tag-amber">All profiles</span>
+      </div>
+      <ul class="rec-pros">
+        <li>20 mins to CBD — one of the best commutes</li>
+        <li>Fully built infrastructure (roads, water, power)</li>
+        <li>30–40% cheaper than equivalent Kilimani units</li>
+        <li>Strong schools, supermarkets, hospitals nearby</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- AFFORDABILITY CALCULATOR -->
+<section class="section fade-in" id="tool">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Affordability & Area Matcher Tool</div>
+      <div class="section-sub">Enter your details to find your ideal Nairobi neighbourhood</div>
+    </div>
+  </div>
+  <div class="calc-card">
+    <div class="calc-grid">
+      <div class="form-group">
+        <label class="form-label">Monthly Net Income (KES)</label>
+        <input type="number" class="form-input" id="income" placeholder="e.g. 60000" value="">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bedroom Type</label>
+        <select class="form-select" id="bedroom">
+          <option value="bedsitter">Bedsitter</option>
+          <option value="1br" selected>1 Bedroom</option>
+          <option value="2br">2 Bedroom</option>
+          <option value="3br">3 Bedroom</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Work Location</label>
+        <select class="form-select" id="workloc">
+          <option value="cbd">Nairobi CBD</option>
+          <option value="upperhill">Upper Hill / Kilimani</option>
+          <option value="westlands">Westlands / Parklands</option>
+          <option value="industrial">Industrial Area / South B</option>
+          <option value="remote">Remote / WFH</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Priority</label>
+        <select class="form-select" id="priority">
+          <option value="cost">Lowest Cost</option>
+          <option value="commute">Short Commute</option>
+          <option value="safety">Safety First</option>
+          <option value="balanced" selected>Balanced Score</option>
+        </select>
+      </div>
+    </div>
+    <button class="calc-btn" onclick="runCalculator()">Find My Area →</button>
+    <div class="calc-result" id="calcResult">
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:12px;">Your Personalised Recommendations</div>
+      <div id="calcText" style="font-size:13px;color:var(--muted2);line-height:1.7;"></div>
+      <div class="result-grid" id="resultCards"></div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- KEY INSIGHTS -->
+<section class="section fade-in">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Key Findings & Policy Insights</div>
+      <div class="section-sub">What the data tells us — and what needs to change</div>
+    </div>
+  </div>
+  <div class="insights-grid">
+    <div class="insight-card" style="--accent: var(--danger);">
+      <div class="insight-title"><span class="insight-icon">🔥</span>The Rent Squeeze is Real</div>
+      <div class="insight-body">Average rent has grown 18.3% over 2 years, far outpacing Kenya's wage growth of ~4.5% over the same period. The typical Nairobian now spends 47% of income on rent — nearly double the globally recommended 30% threshold.</div>
+      <div class="insight-stat">Data source: BuyRentKenya, KNBS 2024 wage surveys</div>
+    </div>
+    <div class="insight-card" style="--accent: var(--amber);">
+      <div class="insight-title"><span class="insight-icon">📐</span>Supply Is The Core Problem</div>
+      <div class="insight-body">Nairobi needs approximately 250,000 new housing units annually to match demand. Current construction delivers roughly 50,000 units. The 5x gap is the structural driver of rent escalation — demand far outstrips supply at every price tier.</div>
+      <div class="insight-stat">Gap: ~200,000 units per year</div>
+    </div>
+    <div class="insight-card" style="--accent: var(--blue);">
+      <div class="insight-title"><span class="insight-icon">🚇</span>Transit Is The Game-Changer</div>
+      <div class="insight-body">Neighbourhoods within 10 minutes of the SGR or Thika Superhighway command 40% lower rents than CBD-adjacent areas for equivalent units. Investment in transit unlocks affordability without requiring relocation to distant areas.</div>
+      <div class="insight-stat">SGR commute from Athi River: 18 min to CBD</div>
+    </div>
+    <div class="insight-card" style="--accent: var(--success);">
+      <div class="insight-title"><span class="insight-icon">🌍</span>Satellite Towns Are Underrated</div>
+      <div class="insight-body">Ruiru, Rongai, and Athi River offer 2-bedroom units at prices matching Nairobi bedsitters — yet infrastructure has improved significantly. Remote work penetration is making these areas viable for a growing segment of workers.</div>
+      <div class="insight-stat">Up to 71% savings vs. Westlands equivalent</div>
+    </div>
+    <div class="insight-card" style="--accent: var(--teal);">
+      <div class="insight-title"><span class="insight-icon">📊</span>Information Asymmetry Costs Renters</div>
+      <div class="insight-body">Analysis found a 35% price premium for identical units in "status" vs equivalent "non-status" neighbourhoods. Renters with data make 30% better decisions. This project itself is the intervention — open data access empowers renters.</div>
+      <div class="insight-stat">Premium charged for "postcode prestige": ~35%</div>
+    </div>
+    <div class="insight-card" style="--accent: var(--amber);">
+      <div class="insight-title"><span class="insight-icon">🏗️</span>Affordable Housing Policy Gaps</div>
+      <div class="insight-body">Kenya's Affordable Housing Programme targets 500,000 units but allocations are skewed toward ownership, not rental. 72% of Nairobi residents are renters. The policy mismatch means public investment is not reaching those most in need.</div>
+      <div class="insight-stat">72% of Nairobians are renters, not owners</div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer-text">
+    Nairobi Housing Analytics · Built by <strong>John Wachira</strong> · Data: BuyRentKenya, Propertybase, KNBS, World Bank 2024<br>
+    Tools: Python · Pandas · Matplotlib · Seaborn · BeautifulSoup · Folium
+  </div>
+  <div>
+    <a href="https://github.com/jowac254" class="footer-link">github.com/jowac254 →</a>
+  </div>
+</footer>
+
+<script>
+// ============================
+// CHART: Rent Trend Lines
+// ============================
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: ['2019','2020','2021','2022','2023','2024'],
+    datasets: [
+      {
+        label: 'Economy',
+        data: [11,11.5,12.8,14.5,16.2,18],
+        borderColor: '#22C55E',
+        backgroundColor: 'rgba(34,197,94,0.08)',
+        fill: true, tension: 0.4, pointRadius: 3,
+        borderDash: []
+      },
+      {
+        label: 'Mid-Range',
+        data: [28,28.5,31,35,40,45],
+        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(245,158,11,0.08)',
+        fill: true, tension: 0.4, pointRadius: 3,
+        borderDash: [5,3]
+      },
+      {
+        label: 'Premium',
+        data: [65,64,70,80,90,98],
+        borderColor: '#EF4444',
+        backgroundColor: 'rgba(239,68,68,0.06)',
+        fill: true, tension: 0.4, pointRadius: 3,
+        borderDash: [2,2]
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717A', font:{size:11} } },
+      y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717A', font:{size:11}, callback: v => 'K'+v } }
+    }
+  }
+});
+
+// ============================
+// CHART: Bedroom Distribution
+// ============================
+new Chart(document.getElementById('bedroomChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Bedsitter','1 BR','2 BR','3 BR','4 BR+'],
+    datasets: [{
+      label: 'Median Rent',
+      data: [12, 22, 38, 65, 110],
+      backgroundColor: ['#22C55E','#22C55E','#F59E0B','#EF4444','#EF4444'],
+      borderRadius: 4,
+      hoverBackgroundColor: '#F59E0B'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717A', font:{size:11} } },
+      y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717A', font:{size:11}, callback: v => 'K'+v } }
+    }
+  }
+});
+
+// ============================
+// CHART: Neighbourhood Horizontal Bar
+// ============================
+const nhoods = ['Githurai','Ruai','Athi River','Rongai','Donholm','South C','South B','Langata','Parklands','Kileleshwa','Lavington','Kilimani','Karen','Westlands'];
+const rents = [12,13,18,22,28,38,42,35,68,78,75,82,88,95];
+const colors = rents.map(r => r < 25 ? '#22C55E' : r < 50 ? '#F59E0B' : '#EF4444');
+new Chart(document.getElementById('neighChart'), {
+  type: 'bar',
+  data: {
+    labels: nhoods,
+    datasets: [{
+      label: 'Avg Monthly Rent (KES K)',
+      data: rents, backgroundColor: colors, borderRadius: 3
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717A', font:{size:11}, callback: v => v+'K' } },
+      y: { grid: { display: false }, ticks: { color: '#A1A1AA', font:{size:11} } }
+    }
+  }
+});
+
+// ============================
+// CHART: Affordability
+// ============================
+new Chart(document.getElementById('affordChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Low Income\n(<30K/mo)','Middle Income\n(30–80K)','Upper Middle\n(80–150K)','High Income\n(150K+)'],
+    datasets: [{
+      label: 'Rent-to-Income %',
+      data: [63, 47, 28, 18],
+      backgroundColor: ['#EF4444','#F59E0B','#3B82F6','#22C55E'],
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      annotation: {}
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#71717A', font:{size:10} } },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#71717A', font:{size:11}, callback: v => v+'%' },
+        max: 80
+      }
+    }
+  }
+});
+
+// ============================
+// CHART: Supply vs Demand
+// ============================
+new Chart(document.getElementById('supplyChart'), {
+  type: 'line',
+  data: {
+    labels: ['2019','2020','2021','2022','2023','2024'],
+    datasets: [
+      {
+        label: 'Demand',
+        data: [200,210,225,245,265,280],
+        borderColor: '#EF4444',
+        fill: false, tension: 0.3, pointRadius: 3,
+        borderDash: []
+      },
+      {
+        label: 'Supply',
+        data: [150,148,152,158,168,180],
+        borderColor: '#22C55E',
+        fill: false, tension: 0.3, pointRadius: 3,
+        borderDash: [5,3]
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717A', font:{size:11} } },
+      y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717A', font:{size:11}, callback: v => v+'K' } }
+    }
+  }
+});
+
+// ============================
+// AREAS TABLE DATA
+// ============================
+const areas = [
+  { name:'Westlands', rent:'KES 85,000', score:6.2, transit:'⭐⭐⭐⭐⭐', security:'⭐⭐⭐⭐⭐', growth:'+8%', cat:'premium', best:'Expats, senior execs' },
+  { name:'Kilimani', rent:'KES 78,000', score:6.5, transit:'⭐⭐⭐⭐', security:'⭐⭐⭐⭐⭐', growth:'+9%', cat:'premium', best:'Professionals, expats' },
+  { name:'Karen', rent:'KES 88,000', score:5.8, transit:'⭐⭐⭐', security:'⭐⭐⭐⭐⭐', growth:'+5%', cat:'premium', best:'Families, top execs' },
+  { name:'Kileleshwa', rent:'KES 72,000', score:6.8, transit:'⭐⭐⭐⭐', security:'⭐⭐⭐⭐⭐', growth:'+7%', cat:'premium', best:'Young professionals' },
+  { name:'South C', rent:'KES 38,000', score:7.4, transit:'⭐⭐⭐⭐', security:'⭐⭐⭐⭐', growth:'+6%', cat:'mid', best:'Families, mid-income' },
+  { name:'South B', rent:'KES 42,000', score:7.6, transit:'⭐⭐⭐⭐', security:'⭐⭐⭐⭐', growth:'+6%', cat:'mid', best:'Young families' },
+  { name:'Langata', rent:'KES 35,000', score:7.5, transit:'⭐⭐⭐', security:'⭐⭐⭐⭐', growth:'+7%', cat:'mid', best:'Families, nature lovers' },
+  { name:'Donholm', rent:'KES 28,000', score:7.9, transit:'⭐⭐⭐⭐', security:'⭐⭐⭐', growth:'+9%', cat:'mid', best:'Young professionals' },
+  { name:'Rongai', rent:'KES 22,000', score:8.4, transit:'⭐⭐⭐', security:'⭐⭐⭐⭐', growth:'+12%', cat:'satellite', best:'Budget families' },
+  { name:'Ruiru', rent:'KES 16,000', score:8.1, transit:'⭐⭐⭐⭐', security:'⭐⭐⭐', growth:'+15%', cat:'satellite', best:'Remote workers' },
+  { name:'Athi River', rent:'KES 18,000', score:7.8, transit:'⭐⭐⭐⭐', security:'⭐⭐⭐⭐', growth:'+11%', cat:'satellite', best:'Families, SGR commuters' },
+  { name:'Githurai', rent:'KES 12,000', score:6.8, transit:'⭐⭐⭐', security:'⭐⭐', growth:'+8%', cat:'budget', best:'Students, low-income' },
+  { name:'Ruai', rent:'KES 13,000', score:6.5, transit:'⭐⭐', security:'⭐⭐⭐', growth:'+6%', cat:'budget', best:'Low-income workers' },
+  { name:'Kahawa West', rent:'KES 15,000', score:7.2, transit:'⭐⭐⭐', security:'⭐⭐⭐', growth:'+10%', cat:'budget', best:'University students' },
+];
+
+function renderTable(data) {
+  const tbody = document.getElementById('areasBody');
+  tbody.innerHTML = '';
+  data.forEach(a => {
+    const pct = Math.round(a.score * 10);
+    const scoreColor = a.score >= 8 ? '#22C55E' : a.score >= 7 ? '#F59E0B' : '#EF4444';
+    const catTag = a.cat === 'premium' ? 'tag-red' : a.cat === 'mid' ? 'tag-amber' : a.cat === 'satellite' ? 'tag-blue' : 'tag-green';
+    const growthColor = parseFloat(a.growth) >= 10 ? '#22C55E' : '#F59E0B';
+    tbody.innerHTML += `<tr>
+      <td>${a.name}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--text)">${a.rent}</td>
+      <td>
+        <div class="score-bar">
+          <span style="font-size:13px;font-weight:500;color:${scoreColor};min-width:28px">${a.score}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${scoreColor}"></div></div>
+        </div>
+      </td>
+      <td style="font-size:12px">${a.transit}</td>
+      <td style="font-size:12px">${a.security}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:${growthColor}">${a.growth}</td>
+      <td><span class="tag ${catTag}">${a.cat}</span></td>
+      <td style="color:var(--muted)">${a.best}</td>
+    </tr>`;
+  });
+}
+
+renderTable(areas);
+
+function filterAreas(cat, btn) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  if (cat === 'all') { renderTable(areas); return; }
+  renderTable(areas.filter(a => a.cat === cat));
+}
+
+// ============================
+// AFFORDABILITY CALCULATOR
+// ============================
+function runCalculator() {
+  const income = parseInt(document.getElementById('income').value) || 60000;
+  const bedroom = document.getElementById('bedroom').value;
+  const workloc = document.getElementById('workloc').value;
+  const priority = document.getElementById('priority').value;
+
+  const maxRent = Math.round(income * 0.30);
+  const ratio = Math.round((income * 0.30 / income) * 100);
+
+  const bedroomRents = { bedsitter: 12000, '1br': 22000, '2br': 38000, '3br': 65000 };
+  const targetRent = bedroomRents[bedroom];
+
+  let recs = [];
+  if (maxRent < 18000) {
+    recs = ['Githurai / Kahawa (KES 9–16K)', 'Ruai (KES 10–15K)', 'Ruiru outskirts (KES 12–18K)'];
+  } else if (maxRent < 30000) {
+    recs = ['Ruiru / Ruaka (KES 14–22K)', 'Rongai / Athi River (KES 18–25K)', 'Donholm (KES 22–28K)'];
+  } else if (maxRent < 50000) {
+    recs = ['Donholm / Savannah (KES 22–35K)', 'South C / South B (KES 30–45K)', 'Langata (KES 28–42K)'];
+  } else {
+    recs = ['Kileleshwa (KES 55–80K)', 'Kilimani (KES 65–90K)', 'Parklands (KES 50–70K)'];
+  }
+
+  const canAfford = maxRent >= targetRent;
+  const gap = targetRent - maxRent;
+
+  const resultEl = document.getElementById('calcResult');
+  const textEl = document.getElementById('calcText');
+  const cardsEl = document.getElementById('resultCards');
+
+  textEl.innerHTML = `Based on your income of <strong style="color:var(--amber)">KES ${income.toLocaleString()}</strong>, your ideal rent budget is <strong style="color:var(--amber)">KES ${maxRent.toLocaleString()}/month</strong> (30% rule). ${canAfford ? `✅ You can comfortably afford a ${bedroom.replace('br',' BR')} in several areas.` : `⚠️ A ${bedroom.replace('br',' BR')} at Nairobi average costs KES ${targetRent.toLocaleString()} — KES ${gap.toLocaleString()} above your ideal budget. Consider satellite towns or a smaller unit type.`}<br><br><strong>Top 3 recommended areas for you:</strong><br>${recs.map(r => `→ ${r}`).join('<br>')}`;
+
+  cardsEl.innerHTML = `
+    <div class="result-item"><div class="result-num" style="color:var(--amber)">KES ${maxRent.toLocaleString()}</div><div class="result-lbl">MAX RENT</div></div>
+    <div class="result-item"><div class="result-num" style="color:${canAfford?'var(--success)':'var(--danger)'}">${canAfford?'✅ Yes':'⚠️ Tight'}</div><div class="result-lbl">AFFORDABLE?</div></div>
+    <div class="result-item"><div class="result-num" style="color:var(--blue)">30%</div><div class="result-lbl">TARGET RATIO</div></div>
+  `;
+
+  resultEl.classList.add('show');
+}
+
+// ============================
+// SCROLL ANIMATIONS
+// ============================
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
