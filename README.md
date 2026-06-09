@@ -19,10 +19,10 @@ Nairobi's average rent has grown **18.3% in two years** while wages have barely 
 
 This project uses data analytics to:
 
-1. **Quantify the crisis** — measure how bad the rent squeeze really is, across income groups and housing types
-2. **Map the opportunity** — identify undervalued neighbourhoods with strong value-to-cost ratios
-3. **Empower renters** — build a tool that recommends areas based on income, commute needs, and lifestyle
-4. **Inform policy** — surface structural causes (supply gap, transit gaps, information asymmetry) that data can help address
+1. **Quantify the crisis** : measure how bad the rent squeeze really is, across income groups and housing types
+2. **Map the opportunity** : identify undervalued neighbourhoods with strong value-to-cost ratios
+3. **Empower renters**     : build a tool that recommends areas based on income, commute needs, and lifestyle
+4. **Inform policy**       : surface structural causes (supply gap, transit gaps, information asymmetry) that data can help address
 
 ---
 
@@ -522,15 +522,15 @@ Interactive Dashboard (HTML + Chart.js)
 
 Based on the analysis, this project recommends:
 
-1. **Accelerate affordable rental supply** — Not ownership. 72% of Nairobians rent. Policy must prioritise rental units, not homeownership subsidies.
+1. **Accelerate affordable rental supply** : Not ownership. 72% of Nairobians rent. Policy must prioritise rental units, not homeownership subsidies.
 
-2. **Invest in transit corridors** — Rongai, Ruiru, and Athi River show that SGR and highway access unlocks 60–70% cost savings while maintaining 30–45 min commutes. Transit investment = housing affordability.
+2. **Invest in transit corridors** : Rongai, Ruiru, and Athi River show that SGR and highway access unlocks 60–70% cost savings while maintaining 30–45 min commutes. Transit investment = housing affordability.
 
-3. **Open data on housing** — This project itself proves the point: data access reduces the 35% "postcode premium" that uninformed renters pay.
+3. **Open data on housing** : This project itself proves the point: data access reduces the 35% "postcode premium" that uninformed renters pay.
 
-4. **Satellite town incentivisation** — Tax incentives for developers building in Ruiru, Athi River, and Rongai would reduce pressure on Nairobi core neighbourhoods significantly.
+4. **Satellite town incentivisation** : Tax incentives for developers building in Ruiru, Athi River, and Rongai would reduce pressure on Nairobi core neighbourhoods significantly.
 
-5. **Rent indexation policy** — Annual rent increases should be capped in line with KNBS wage growth data, not market speculation.
+5. **Rent indexation policy** : Annual rent increases should be capped in line with KNBS wage growth data, not market speculation.
 
 ---
 
